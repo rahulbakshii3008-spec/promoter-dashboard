@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymCare Refer &amp; Earn — Promoter Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Hind:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#121316;
+    --bg-raise:#1b1d22;
+    --surface:#20232a;
+    --line:rgba(243,241,234,0.10);
+    --line-strong:rgba(243,241,234,0.20);
+    --chalk:#f3f1ea;
+    --chalk-dim:#b8b5ab;
+    --steel:#8b929b;
+    --gold:#e8ac2e;
+    --gold-dim:#c99420;
+    --green:#3ecf6a;
+    --iron-red:#c1392b;
+    --radius:14px;
+    --display:'Bebas Neue', 'Hind', sans-serif;
+    --body:'Hind', sans-serif;
+    --mono:'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--chalk); font-family:var(--body);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer;}
+  input{font-family:inherit;}
+
+  .wrap{max-width:820px; margin:0 auto; padding:0 20px;}
+
+  /* ---------- nav ---------- */
+  .nav{
+    border-bottom:1px solid var(--line);
+    background:rgba(18,19,22,0.9); backdrop-filter:blur(8px);
+    position:sticky; top:0; z-index:20;
+  }
+  .nav-inner{
+    max-width:820px; margin:0 auto; padding:16px 20px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .logo{font-family:var(--display); font-size:24px; letter-spacing:1px;}
+  .logo span{color:var(--gold);}
+  .logo small{
+    display:block; font-family:var(--mono); font-size:10px; letter-spacing:1.5px;
+    color:var(--steel); text-transform:uppercase; margin-top:-4px;
+  }
+  .logout-btn{
+    background:transparent; border:1px solid var(--line-strong); color:var(--chalk-dim);
+    padding:8px 16px; border-radius:100px; font-size:13px; font-weight:600;
+  }
+  .logout-btn:hover{border-color:var(--iron-red); color:var(--iron-red);}
+
+  /* ---------- auth screens ---------- */
+  .auth-shell{
+    min-height:calc(100vh - 65px);
+    display:flex; align-items:center; justify-content:center;
+    padding:40px 20px;
+  }
+  .auth-box{
+    width:100%; max-width:400px;
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:18px; padding:36px 30px;
+  }
+  .auth-box h1{
+    font-family:var(--display); font-size:32px; letter-spacing:0.5px;
+    text-align:center; margin-bottom:6px;
+  }
+  .auth-box .sub{
+    text-align:center; color:var(--chalk-dim); font-size:14px; margin-bottom:26px;
+  }
+  .tabs{
+    display:flex; background:var(--bg); border-radius:100px; padding:4px;
+    margin-bottom:26px; border:1px solid var(--line);
+  }
+  .tab{
+    flex:1; text-align:center; padding:9px; border:none; background:transparent;
+    color:var(--chalk-dim); font-weight:700; font-size:13.5px; border-radius:100px;
+    transition:all .2s ease;
+  }
+  .tab.active{background:var(--gold); color:#17150d;}
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block; font-size:12px; font-weight:700; color:var(--chalk-dim);
+    text-transform:uppercase; letter-spacing:0.4px; margin-bottom:7px;
+  }
+  .field input{
+    width:100%; padding:12px 14px; background:var(--bg);
+    border:1px solid var(--line-strong); border-radius:10px;
+    color:var(--chalk); font-size:15px; outline:none;
+    transition:border-color .15s ease;
+  }
+  .field input:focus{border-color:var(--gold);}
+  .field-check{
+    display:flex; align-items:flex-start; gap:9px; margin-bottom:20px;
+  }
+  .field-check input{width:auto; margin-top:3px;}
+  .field-check label{font-size:12.5px; color:var(--chalk-dim); text-transform:none; letter-spacing:0; font-weight:500;}
+
+  .primary-btn{
+    width:100%; padding:14px; background:var(--gold); color:#17150d;
+    border:none; border-radius:10px; font-weight:700; font-size:15.5px;
+    transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  }
+  .primary-btn:hover{transform:translateY(-1px); box-shadow:0 10px 26px rgba(232,172,46,0.28);}
+  .primary-btn:disabled{opacity:0.6; cursor:not-allowed; transform:none; box-shadow:none;}
+
+  .alert{
+    margin-top:14px; padding:11px 14px; border-radius:9px;
+    font-size:13.5px; font-weight:600; display:none;
+  }
+  .alert.show{display:block;}
+  .alert.err{background:rgba(193,57,43,0.14); color:#f08b81;}
+  .alert.ok{background:rgba(62,207,106,0.12); color:#6fe397;}
+
+  /* ---------- dashboard ---------- */
+  #dashboard{display:none; padding:32px 0 60px;}
+  .greet{margin-bottom:26px;}
+  .greet h1{font-family:var(--display); font-size:30px; letter-spacing:0.5px;}
+  .greet p{color:var(--chalk-dim); font-size:14px; margin-top:4px;}
+
+  .ref-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:22px 24px; margin-bottom:20px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .ref-card .code-label{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--steel); margin-bottom:6px;}
+  .ref-card .code{font-family:var(--mono); font-size:22px; font-weight:700; color:var(--gold); letter-spacing:1px;}
+  .ref-actions{display:flex; gap:10px;}
+  .ghost-btn{
+    background:transparent; border:1px solid var(--line-strong); color:var(--chalk);
+    padding:10px 16px; border-radius:100px; font-size:13px; font-weight:700;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .ghost-btn:hover{border-color:var(--gold); color:var(--gold);}
+
+  /* receipt-style balance ticket — the signature element */
+  .receipt{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:26px 26px 22px; margin-bottom:24px; position:relative;
+    background-image:
+      radial-gradient(circle at 0 50%, var(--bg) 8px, transparent 9px),
+      radial-gradient(circle at 100% 50%, var(--bg) 8px, transparent 9px);
+    background-position:left center, right center;
+    background-repeat:no-repeat;
+  }
+  .receipt-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--steel); text-align:center; margin-bottom:18px;
+    border-bottom:1px dashed var(--line-strong); padding-bottom:14px;
+  }
+  .receipt-rows{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; text-align:center;}
+  .receipt-row .lbl{font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--chalk-dim); margin-bottom:6px;}
+  .receipt-row .val{font-family:var(--display); font-size:26px; letter-spacing:0.5px;}
+  .receipt-row.locked .val{color:var(--steel);}
+  .receipt-row.unlocked .val{color:var(--green);}
+  .receipt-row.paid .val{color:var(--gold);}
+  @media (max-width:480px){ .receipt-rows{grid-template-columns:1fr; gap:16px;} }
+
+  .withdraw-bar{
+    margin-top:18px; padding-top:16px; border-top:1px dashed var(--line-strong);
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
+  .withdraw-note{font-size:12.5px; color:var(--chalk-dim);}
+  .withdraw-btn{
+    padding:11px 22px; background:var(--gold); color:#17150d; border:none;
+    border-radius:100px; font-weight:700; font-size:14px;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  .withdraw-btn:hover{transform:translateY(-1px);}
+  .withdraw-btn:disabled{opacity:0.4; cursor:not-allowed; transform:none;}
+
+  .section-title{
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+    color:var(--steel); margin:32px 0 14px;
+  }
+
+  .table-wrap{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden;
+  }
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  thead th{
+    text-align:left; padding:12px 16px; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.6px; color:var(--steel); border-bottom:1px solid var(--line);
+    font-weight:700;
+  }
+  tbody td{padding:13px 16px; border-bottom:1px solid var(--line); color:var(--chalk-dim);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td.name{color:var(--chalk); font-weight:600;}
+
+  .badge{
+    display:inline-block; padding:4px 10px; border-radius:100px;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px;
+  }
+  .badge.lead{background:rgba(139,146,155,0.15); color:var(--steel);}
+  .badge.verified-locked{background:rgba(232,172,46,0.15); color:var(--gold);}
+  .badge.verified-unlocked{background:rgba(62,207,106,0.15); color:var(--green);}
+  .badge.paid{background:rgba(92,126,242,0.15); color:#8ea2f7;}
+  .badge.reversed{background:rgba(193,57,43,0.15); color:#f08b81;}
+
+  .empty-row{padding:30px 16px; text-align:center; color:var(--steel); font-size:14px;}
+
+  .loading-veil{
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; color:var(--chalk-dim); font-family:var(--mono); font-size:13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-veil" id="loadingVeil">Loading…</div>
+
+<header class="nav" id="navBar" style="display:none;">
+  <div class="nav-inner">
+    <div class="logo">GymCare<span>.</span><small>REFER &amp; EARN</small></div>
+    <button class="logout-btn" id="logoutBtn" type="button">Logout</button>
+  </div>
+</header>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div class="auth-shell" id="authShell">
+  <div class="auth-box">
+    <h1>Refer &amp; Earn</h1>
+    <p class="sub">GymCare promoter dashboard</p>
+
+    <div class="tabs">
+      <button class="tab active" id="tabLogin" type="button">Login</button>
+      <button class="tab" id="tabSignup" type="button">Sign Up</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <form id="loginForm">
+      <div class="field">
+        <label>Phone Number</label>
+        <input type="tel" id="loginPhone" placeholder="98765 43210" inputmode="numeric" required autocomplete="tel">
+      </div>
+      <div class="field">
+        <label>PIN</label>
+        <input type="password" id="loginPin" placeholder="••••" inputmode="numeric" maxlength="6" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="primary-btn" id="loginSubmit">Login</button>
+      <div class="alert" id="loginAlert"></div>
+    </form>
+
+    <!-- SIGNUP FORM -->
+    <form id="signupForm" style="display:none;">
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="signupName" placeholder="Rahul Kumar" required autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Phone Number</label>
+        <input type="tel" id="signupPhone" placeholder="98765 43210" inputmode="numeric" required autocomplete="tel">
+      </div>
+      <div class="field">
+        <label>Set a PIN (4–6 digits)</label>
+        <input type="password" id="signupPin" placeholder="••••" inputmode="numeric" maxlength="6" required autocomplete="new-password">
+      </div>
+      <div class="field-check">
+        <input type="checkbox" id="signupTerms" required>
+        <label for="signupTerms">Main GymCare Refer &amp; Earn ke terms se sehmat hoon — commission ek baar milta hai per referred gym, aur verify hone ke 31 din baad hi unlock hota hai.</label>
+      </div>
+      <button type="submit" class="primary-btn" id="signupSubmit">Create Account</button>
+      <div class="alert" id="signupAlert"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div id="dashboard">
+  <div class="wrap">
+    <div class="greet">
+      <h1 id="greetName">Welcome back</h1>
+      <p>Apna referral link share karo, gym owners refer karo, commission kamao.</p>
+    </div>
+
+    <div class="ref-card">
+      <div>
+        <div class="code-label">Your Referral Code</div>
+        <div class="code" id="refCode">—</div>
+      </div>
+      <div class="ref-actions">
+        <button class="ghost-btn" id="copyLinkBtn" type="button">Copy Link</button>
+        <button class="ghost-btn" id="shareBtn" type="button">Share</button>
+      </div>
+    </div>
+
+    <div class="receipt">
+      <div class="receipt-title">Commission Balance</div>
+      <div class="receipt-rows">
+        <div class="receipt-row locked">
+          <div class="lbl">Locked</div>
+          <div class="val" id="balLocked">₹0</div>
+        </div>
+        <div class="receipt-row unlocked">
+          <div class="lbl">Unlocked</div>
+          <div class="val" id="balUnlocked">₹0</div>
+        </div>
+        <div class="receipt-row paid">
+          <div class="lbl">Paid Till Date</div>
+          <div class="val" id="balPaid">₹0</div>
+        </div>
+      </div>
+      <div class="withdraw-bar">
+        <div class="withdraw-note" id="withdrawNote">Minimum ₹1500 unlocked balance chahiye withdraw karne ke liye.</div>
+        <button class="withdraw-btn" id="withdrawBtn" type="button">Withdraw</button>
+      </div>
+      <div class="alert" id="withdrawAlert" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="section-title">Your Referrals</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Phone</th><th>Status</th><th>Commission</th><th>Date</th></tr>
+        </thead>
+        <tbody id="referralsBody">
+          <tr><td colspan="5" class="empty-row">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Withdrawal History</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Amount</th><th>Status</th><th>Requested</th><th>Resolved</th></tr>
+        </thead>
+        <tbody id="withdrawalsBody">
+          <tr><td colspan="4" class="empty-row">Koi withdrawal request nahi hai</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Config — update these two if either service's URL ever changes ────
+  const BACKEND_URL = 'https://gymcare-refer-earn.onrender.com';
+  const LANDING_PAGE_URL = 'https://rahulbakshii3008-spec.github.io/gymcare-landing/'; // used to build each promoter's shareable ?ref= link
+
+  const TOKEN_KEY = 'gymcare_promoter_token';
+
+  const $ = (id) => document.getElementById(id);
+
+  function api(path, opts) {
+    opts = opts || {};
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(BACKEND_URL.replace(/\/$/, '') + path, {
+      method: opts.method || 'GET',
+      headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    }).then(async (r) => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(data.error || 'Request failed'), { data, status: r.status });
+      return data;
+    });
+  }
+
+  function showAlert(el, msg, type) {
+    el.textContent = msg;
+    el.className = 'alert show ' + (type || 'err');
+  }
+  function hideAlert(el) { el.className = 'alert'; }
+
+  function fmtMoney(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+  function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
+
+  function stageBadge(r) {
+    if (r.stage === 'lead') return '<span class="badge lead">Pending</span>';
+    if (r.stage === 'paid') return '<span class="badge paid">Paid</span>';
+    if (r.stage === 'reversed') return '<span class="badge reversed">Reversed</span>';
+    if (r.stage === 'verified') {
+      const unlocked = r.unlock_at && new Date(r.unlock_at) <= new Date() && !r.withdrawal_request_id;
+      const frozen = !!r.withdrawal_request_id && r.stage !== 'paid';
+      if (frozen) return '<span class="badge verified-unlocked">In Withdrawal</span>';
+      return unlocked
+        ? '<span class="badge verified-unlocked">Unlocked</span>'
+        : '<span class="badge verified-locked">Locked</span>';
+    }
+    return '<span class="badge lead">' + r.stage + '</span>';
+  }
+
+  /* ---------- tab switching ---------- */
+  $('tabLogin').addEventListener('click', () => {
+    $('tabLogin').classList.add('active'); $('tabSignup').classList.remove('active');
+    $('loginForm').style.display = 'block'; $('signupForm').style.display = 'none';
+  });
+  $('tabSignup').addEventListener('click', () => {
+    $('tabSignup').classList.add('active'); $('tabLogin').classList.remove('active');
+    $('signupForm').style.display = 'block'; $('loginForm').style.display = 'none';
+  });
+
+  /* ---------- signup ---------- */
+  $('signupForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideAlert($('signupAlert'));
+    const btn = $('signupSubmit');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    api('/promoter/signup', {
+      method: 'POST',
+      body: {
+        name: $('signupName').value.trim(),
+        phone: $('signupPhone').value.trim(),
+        pin: $('signupPin').value.trim(),
+        termsAccepted: $('signupTerms').checked,
+      },
+    }).then((data) => {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      loadDashboard();
+    }).catch((err) => {
+      showAlert($('signupAlert'), err.data && err.data.error ? err.data.error : 'Kuch galat ho gaya, dobara try karein', 'err');
+    }).finally(() => {
+      btn.disabled = false; btn.textContent = 'Create Account';
+    });
+  });
+
+  /* ---------- login ---------- */
+  $('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideAlert($('loginAlert'));
+    const btn = $('loginSubmit');
+    btn.disabled = true; btn.textContent = 'Logging in…';
+    api('/promoter/login', {
+      method: 'POST',
+      body: { phone: $('loginPhone').value.trim(), pin: $('loginPin').value.trim() },
+    }).then((data) => {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      loadDashboard();
+    }).catch((err) => {
+      const msg = err.data && err.data.retryAfterSeconds
+        ? 'Bahut zyada galat attempts — ' + err.data.retryAfterSeconds + ' second baad try karein'
+        : (err.data && err.data.error ? err.data.error : 'Login fail ho gaya');
+      showAlert($('loginAlert'), msg, 'err');
+    }).finally(() => {
+      btn.disabled = false; btn.textContent = 'Login';
+    });
+  });
+
+  /* ---------- logout ---------- */
+  $('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem(TOKEN_KEY);
+    $('dashboard').style.display = 'none';
+    $('navBar').style.display = 'none';
+    $('authShell').style.display = 'flex';
+  });
+
+  /* ---------- dashboard load ---------- */
+  function loadDashboard() {
+    $('loadingVeil').style.display = 'flex';
+    api('/promoter/me').then((data) => {
+      $('authShell').style.display = 'none';
+      $('navBar').style.display = 'block';
+      $('dashboard').style.display = 'block';
+
+      $('greetName').textContent = 'Welcome, ' + data.promoter.name;
+      $('refCode').textContent = data.promoter.referralCode;
+
+      $('balLocked').textContent = fmtMoney(data.balance.locked);
+      $('balUnlocked').textContent = fmtMoney(data.balance.unlocked);
+      $('balPaid').textContent = fmtMoney(data.balance.paid);
+
+      $('withdrawBtn').disabled = !data.canWithdraw;
+      $('withdrawNote').textContent = data.canWithdraw
+        ? 'Aapka balance withdraw ke liye ready hai.'
+        : (data.balance.unlocked > 0
+          ? 'Abhi ₹' + data.balance.unlocked + ' unlocked hai — ₹1500 hone par withdraw kar sakte hain.'
+          : 'Minimum ₹1500 unlocked balance chahiye withdraw karne ke liye.');
+
+      const refBody = $('referralsBody');
+      if (!data.referrals || !data.referrals.length) {
+        refBody.innerHTML = '<tr><td colspan="5" class="empty-row">Abhi tak koi referral nahi hai — apna link share karo!</td></tr>';
+      } else {
+        refBody.innerHTML = data.referrals.map((r) => (
+          '<tr>' +
+            '<td class="name">' + (r.prospect_name || '—') + '</td>' +
+            '<td>' + r.prospect_phone + '</td>' +
+            '<td>' + stageBadge(r) + '</td>' +
+            '<td>' + (r.commission_amount ? fmtMoney(r.commission_amount) : '—') + '</td>' +
+            '<td>' + fmtDate(r.created_at) + '</td>' +
+          '</tr>'
+        )).join('');
+      }
+
+      const wBody = $('withdrawalsBody');
+      if (!data.withdrawals || !data.withdrawals.length) {
+        wBody.innerHTML = '<tr><td colspan="4" class="empty-row">Koi withdrawal request nahi hai</td></tr>';
+      } else {
+        wBody.innerHTML = data.withdrawals.map((w) => (
+          '<tr>' +
+            '<td class="name">' + fmtMoney(w.amount) + '</td>' +
+            '<td><span class="badge ' + (w.status === 'paid' ? 'paid' : w.status === 'rejected' ? 'reversed' : 'lead') + '">' + w.status + '</span></td>' +
+            '<td>' + fmtDate(w.requested_at) + '</td>' +
+            '<td>' + fmtDate(w.resolved_at) + '</td>' +
+          '</tr>'
+        )).join('');
+      }
+    }).catch(() => {
+      localStorage.removeItem(TOKEN_KEY);
+      $('dashboard').style.display = 'none';
+      $('navBar').style.display = 'none';
+      $('authShell').style.display = 'flex';
+    }).finally(() => {
+      $('loadingVeil').style.display = 'none';
+    });
+  }
+
+  /* ---------- withdraw ---------- */
+  $('withdrawBtn').addEventListener('click', function () {
+    hideAlert($('withdrawAlert'));
+    const btn = $('withdrawBtn');
+    btn.disabled = true;
+    api('/promoter/withdraw', { method: 'POST' }).then((data) => {
+      showAlert($('withdrawAlert'), 'Withdrawal request bhej di gayi — ' + fmtMoney(data.amount) + '. Rahul jaldi process karenge.', 'ok');
+      loadDashboard();
+    }).catch((err) => {
+      showAlert($('withdrawAlert'), err.data && err.data.error ? err.data.error : 'Withdraw request fail ho gayi', 'err');
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- copy / share referral link ---------- */
+  function referralLink() {
+    const code = $('refCode').textContent;
+    return LANDING_PAGE_URL.replace(/\/$/, '') + '/?ref=' + encodeURIComponent(code);
+  }
+  $('copyLinkBtn').addEventListener('click', function () {
+    navigator.clipboard.writeText(referralLink()).then(() => {
+      const btn = $('copyLinkBtn');
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+  });
+  $('shareBtn').addEventListener('click', function () {
+    const link = referralLink();
+    const text = 'GymCare use karo apne gym mein — mera link se signup karo: ' + link;
+    if (navigator.share) {
+      navigator.share({ title: 'GymCare India', text, url: link }).catch(() => {});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    }
+  });
+
+  /* ---------- boot ---------- */
+  if (localStorage.getItem(TOKEN_KEY)) {
+    loadDashboard();
+  } else {
+    $('loadingVeil').style.display = 'none';
+  }
+})();
+</script>
+
+</body>
+</html>
