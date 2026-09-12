@@ -261,6 +261,18 @@
   .withdraw-btn:hover:not(:disabled){transform:translateY(-1px); box-shadow:0 10px 22px rgba(232,172,46,0.28);}
   .withdraw-btn:disabled{opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none;}
 
+  .upi-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    padding:12px 4px; margin-top:4px; border-top:1px dashed var(--line-strong);
+  }
+  .upi-row-label{font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--chalk-dim);}
+  .upi-row-value{font-size:13.5px; font-weight:600;}
+  .upi-row-value.unset{color:var(--chalk-dim); font-weight:500; font-style:italic;}
+  .upi-edit-btn{
+    font-size:12px; font-weight:700; color:var(--gold); background:none; border:none; padding:4px 2px;
+    text-decoration:underline; text-underline-offset:3px;
+  }
+
   .section-title{
     font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
     color:var(--steel); margin:30px 0 12px;
@@ -471,6 +483,10 @@
         <div class="withdraw-note" id="withdrawNote">Minimum ₹1500 unlocked balance chahiye withdraw karne ke liye.</div>
         <button class="withdraw-btn" id="withdrawBtn" type="button">Withdraw</button>
       </div>
+      <div class="upi-row">
+        <div><div class="upi-row-label">Payout UPI ID</div><div class="upi-row-value unset" id="upiValue">Not set yet</div></div>
+        <button class="upi-edit-btn" id="upiEditBtn" type="button">Add UPI ID</button>
+      </div>
       <div class="alert" id="withdrawAlert" style="margin-top:14px;"></div>
     </div>
 
@@ -519,6 +535,23 @@
   </div>
 </div>
 
+<!-- ══════════════ UPI ID MODAL ══════════════ -->
+<div class="modal-veil" id="upiModal">
+  <div class="modal-box">
+    <h3>Payout UPI ID</h3>
+    <p style="font-size:13px; color:var(--chalk-dim); margin-bottom:16px; line-height:1.6;">Ye UPI ID hi wahi jagah hai jaha aapka commission bheja jayega. Withdraw request bhejne se pehle isse save karna zaroori hai.</p>
+    <div class="field">
+      <label for="upiInput">UPI ID</label>
+      <input type="text" id="upiInput" placeholder="name@okhdfcbank" autocomplete="off">
+    </div>
+    <div class="alert" id="upiAlert"></div>
+    <div style="display:flex; gap:10px; margin-top:6px;">
+      <button class="modal-close-btn" id="closeUpi" type="button" style="flex:1;">Cancel</button>
+      <button class="withdraw-btn" id="saveUpiBtn" type="button" style="flex:1;">Save UPI ID</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   // ── Config — update these two if either service's URL ever changes ────
@@ -527,6 +560,8 @@
 
   const TOKEN_KEY = 'gymcare_promoter_token';
   const THEME_KEY = 'gymcare_promoter_theme';
+  let currentUpiId = null;
+  let withdrawAfterUpiSave = false;
 
   const $ = (id) => document.getElementById(id);
 
@@ -660,6 +695,17 @@
       $('greetName').textContent = 'Welcome, ' + data.promoter.name;
       $('refCode').textContent = data.promoter.referralCode;
 
+      currentUpiId = data.promoter.upiId || null;
+      if (currentUpiId) {
+        $('upiValue').textContent = currentUpiId;
+        $('upiValue').classList.remove('unset');
+        $('upiEditBtn').textContent = 'Change';
+      } else {
+        $('upiValue').textContent = 'Not set yet';
+        $('upiValue').classList.add('unset');
+        $('upiEditBtn').textContent = 'Add UPI ID';
+      }
+
       $('balLocked').textContent = fmtMoney(data.balance.locked);
       $('balUnlocked').textContent = fmtMoney(data.balance.unlocked);
       $('balPaid').textContent = fmtMoney(data.balance.paid);
@@ -722,8 +768,40 @@
     });
   }
 
+  /* ---------- UPI ID modal ---------- */
+  function openUpiModal() {
+    hideAlert($('upiAlert'));
+    $('upiInput').value = currentUpiId || '';
+    $('upiModal').classList.add('show');
+  }
+  $('upiEditBtn').addEventListener('click', function () { withdrawAfterUpiSave = false; openUpiModal(); });
+  $('closeUpi').addEventListener('click', function () { withdrawAfterUpiSave = false; $('upiModal').classList.remove('show'); });
+  $('upiModal').addEventListener('click', function (e) { if (e.target === $('upiModal')) { withdrawAfterUpiSave = false; $('upiModal').classList.remove('show'); } });
+  $('saveUpiBtn').addEventListener('click', function () {
+    hideAlert($('upiAlert'));
+    const upiId = $('upiInput').value.trim();
+    if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId)) {
+      showAlert($('upiAlert'), 'Valid UPI ID dein, jaise name@okhdfcbank', 'err');
+      return;
+    }
+    const btn = $('saveUpiBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    api('/promoter/upi', { method: 'POST', body: { upiId } }).then(() => {
+      currentUpiId = upiId;
+      $('upiValue').textContent = upiId;
+      $('upiValue').classList.remove('unset');
+      $('upiEditBtn').textContent = 'Change';
+      $('upiModal').classList.remove('show');
+      if (withdrawAfterUpiSave) { withdrawAfterUpiSave = false; doWithdraw(); }
+    }).catch((err) => {
+      showAlert($('upiAlert'), err.data && err.data.error ? err.data.error : 'UPI ID save nahi ho paya', 'err');
+    }).finally(() => {
+      btn.disabled = false; btn.textContent = 'Save UPI ID';
+    });
+  });
+
   /* ---------- withdraw ---------- */
-  $('withdrawBtn').addEventListener('click', function () {
+  function doWithdraw() {
     hideAlert($('withdrawAlert'));
     const btn = $('withdrawBtn');
     btn.disabled = true;
@@ -734,6 +812,14 @@
       showAlert($('withdrawAlert'), err.data && err.data.error ? err.data.error : 'Withdraw request fail ho gayi', 'err');
       btn.disabled = false;
     });
+  }
+  $('withdrawBtn').addEventListener('click', function () {
+    if (!currentUpiId) {
+      withdrawAfterUpiSave = true;
+      openUpiModal();
+      return;
+    }
+    doWithdraw();
   });
 
   /* ---------- copy / share referral link ---------- */
