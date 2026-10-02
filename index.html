@@ -359,6 +359,25 @@
     width:100%; margin-top:20px; padding:12px; background:var(--gold); color:#17150d;
     border:none; border-radius:10px; font-weight:700; font-size:14.5px;
   }
+
+  /* ===== v2 Creator Partner additions ===== */
+  .panel-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:22px;}
+  .panel-card h3{font-family:var(--display); font-size:22px; letter-spacing:.5px; color:var(--chalk); margin:0 0 4px;}
+  .panel-card .sub{font-size:12.5px; color:var(--steel); margin-bottom:16px; line-height:1.5;}
+  .funnel-row{display:grid; grid-template-columns:96px 1fr 70px; gap:10px; align-items:center; margin-bottom:10px; font-size:13px; color:var(--chalk-dim);}
+  .funnel-bar{height:10px; border-radius:99px; background:var(--surface-2); overflow:hidden;}
+  .funnel-bar>i{display:block; height:100%; background:var(--gold); border-radius:99px; transition:width .5s;}
+  .funnel-row b{font-family:var(--mono); color:var(--chalk); text-align:right; font-size:12.5px;}
+  .goal-line{display:flex; justify-content:space-between; font-size:12.5px; color:var(--chalk-dim); margin:16px 0 8px;}
+  .insight-note{margin-top:14px; font-size:13px; color:var(--chalk-dim); line-height:1.55; padding:10px 12px; background:var(--gold-soft); border-radius:10px;}
+  .kit-item{border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; background:var(--surface-2);}
+  .kit-item .kt{font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--gold); margin-bottom:6px;}
+  .kit-item .kb{font-size:13.5px; color:var(--chalk-dim); line-height:1.55; white-space:pre-wrap;}
+  .kit-actions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .kit-table{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;}
+  .kit-table td,.kit-table th{padding:8px 6px; border-bottom:1px solid var(--line); text-align:left; color:var(--chalk-dim);}
+  .kit-table td:last-child,.kit-table th:last-child{text-align:right; color:var(--gold); font-family:var(--mono);}
+  .field-select{width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line-strong); background:var(--surface-2); color:var(--chalk); font:inherit;}
 </style>
 </head>
 <body>
@@ -416,6 +435,13 @@
       <div class="field">
         <label>Set a PIN (4–6 digits)</label>
         <input type="password" id="signupPin" placeholder="••••" inputmode="numeric" maxlength="6" required autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="signupPartnerType">Main hoon</label>
+        <select id="signupPartnerType" class="field-select">
+          <option value="creator">Creator / reviewer / fitness page (gym owners ko introduce karta hoon)</option>
+          <option value="sales_promoter">Sales Promoter (khud gyms dhoondh kar pitch karta hoon)</option>
+        </select>
       </div>
       <div class="field-check">
         <input type="checkbox" id="signupTerms" required>
@@ -488,6 +514,29 @@
         <button class="upi-edit-btn" id="upiEditBtn" type="button">Add UPI ID</button>
       </div>
       <div class="alert" id="withdrawAlert" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- v2: Referral funnel & goal (computed client-side from /promoter/me, no new tracking) -->
+    <div class="panel-card reveal" id="insightsCard">
+      <h3>Your Referral Funnel</h3>
+      <div class="sub">Based on your actual referrals in this dashboard. Link clicks are not tracked yet.</div>
+      <div id="funnelBox"></div>
+      <div class="goal-line"><span>Progress to ₹1,500 withdrawal</span><b id="goalPct" style="font-family:var(--mono);color:var(--chalk);">0%</b></div>
+      <div class="funnel-bar"><i id="goalBar" style="width:0%"></i></div>
+      <div class="insight-note" id="insightNote"></div>
+    </div>
+
+    <!-- v2: Share Kit (scripts + WhatsApp share with your referral link) -->
+    <div class="panel-card reveal" id="shareKit">
+      <h3>Share Kit</h3>
+      <div class="sub">Edit the wording to sound like you. Every message includes your own referral link.</div>
+      <div id="kitScripts"></div>
+      <details style="margin-top:14px;"><summary style="cursor:pointer;font-size:13.5px;color:var(--chalk);font-weight:600;">Commission per eligible referred gym</summary>
+        <table class="kit-table"><tr><th>Plan</th><th>Commission</th></tr>
+          <tr><td>Lite ₹299/month</td><td>₹200</td></tr><tr><td>Growth ₹699/month</td><td>₹600</td></tr><tr><td>Pro Ultimate ₹999/month</td><td>₹900</td></tr>
+          <tr><td>Lite ₹2,990/year</td><td>₹600</td></tr><tr><td>Growth ₹6,990/year</td><td>₹1,200</td></tr><tr><td>Pro Ultimate ₹9,990/year</td><td>₹1,800</td></tr></table>
+        <div class="sub" style="margin:8px 0 0;">One-time per referred gym. Unlocks 31 days after the gym's payment, subject to program rules. Not guaranteed.</div>
+      </details>
     </div>
 
     <div class="section-title">Your Referrals</div>
@@ -643,6 +692,7 @@
         phone: $('signupPhone').value.trim(),
         pin: $('signupPin').value.trim(),
         termsAccepted: $('signupTerms').checked,
+        partnerType: $('signupPartnerType').value,
       },
     }).then((data) => {
       localStorage.setItem(TOKEN_KEY, data.token);
@@ -728,6 +778,8 @@
       $('statTotal').textContent = referrals.length;
       $('statVerified').textContent = verifiedCount;
       $('statMonth').textContent = fmtMoney(monthEarned);
+      renderInsights(referrals, data.balance);
+      renderKit();
 
       const refBody = $('referralsBody');
       if (!referrals.length) {
@@ -845,11 +897,55 @@
     }
   });
 
+
+  /* ---------- v2: insights + share kit ---------- */
+  const KIT_SCRIPTS = [
+    ['Simple version', 'Bhai, main ek gym-management platform ke saath partner hoon. Agar tum members, fees aur leads manage karne ke liye kuch better dekh rahe ho, main GYMBoat ka demo connect kara sakta hoon.'],
+    ['Casual gym-owner introduction', 'Bro, aapka gym kaafi grow kar raha hai. Ek platform suggest karna tha — GYMBoat. Members, fees, leads aur gym operations ko manage karne ke liye hai. Agar chaho to main demo connect kara deta hoon.'],
+    ['WhatsApp introduction', 'Sir, ek gym-management platform share karna tha — GYMBoat. Agar aap members, fees, leads aur daily gym operations ko more systematically manage karna chahte hain, main aapko demo connect kara sakta hoon.'],
+    ['New gym opening', 'New gym start kar rahe ho to management system beginning se organized rakhna useful hota hai. GYMBoat ka demo dekh sakte ho. Main connect kara deta hoon.'],
+  ];
+  function renderKit() {
+    const link = referralLink();
+    $('kitScripts').innerHTML = KIT_SCRIPTS.map((s, i) => (
+      '<div class="kit-item"><div class="kt">' + s[0] + '</div><div class="kb" id="kitText' + i + '"></div>' +
+      '<div class="kit-actions"><button class="ghost-btn" type="button" data-kit-copy="' + i + '">Copy</button>' +
+      '<button class="ghost-btn" type="button" data-kit-wa="' + i + '">Send on WhatsApp</button></div></div>'
+    )).join('');
+    KIT_SCRIPTS.forEach((s, i) => { $('kitText' + i).textContent = s[1] + '\n\n' + link; });
+  }
+  $('kitScripts').addEventListener('click', function (e) {
+    const c = e.target.closest('[data-kit-copy]'), w = e.target.closest('[data-kit-wa]');
+    if (c) { navigator.clipboard.writeText($('kitText' + c.dataset.kitCopy).textContent).then(() => { c.textContent = 'Copied ✓'; setTimeout(() => { c.textContent = 'Copy'; }, 1500); }); }
+    if (w) { window.open('https://wa.me/?text=' + encodeURIComponent($('kitText' + w.dataset.kitWa).textContent), '_blank'); }
+  });
+  function renderInsights(refs, bal) {
+    const total = refs.length;
+    const ver = refs.filter((r) => r.stage === 'verified' || r.stage === 'paid').length;
+    const paid = refs.filter((r) => r.stage === 'paid').length;
+    const rows = [['Referred', total], ['Verified', ver], ['Paid out', paid]];
+    $('funnelBox').innerHTML = rows.map((x) => (
+      '<div class="funnel-row"><span>' + x[0] + '</span><div class="funnel-bar"><i style="width:' + (total ? Math.round(x[1] / total * 100) : 0) + '%"></i></div><b>' + x[1] + (total ? ' · ' + Math.round(x[1] / total * 100) + '%' : '') + '</b></div>'
+    )).join('');
+    const pct = Math.min(100, Math.round((bal.unlocked || 0) / 1500 * 100));
+    $('goalPct').textContent = pct + '%'; $('goalBar').style.width = pct + '%';
+    const now = new Date();
+    const upcoming = refs.filter((r) => r.stage === 'verified' && !r.withdrawal_request_id && r.unlock_at && new Date(r.unlock_at) > now)
+      .sort((a, b) => new Date(a.unlock_at) - new Date(b.unlock_at))[0];
+    let note;
+    if (!total) note = 'Next step: copy your link from the Share Kit below and send it to one gym owner you already know.';
+    else if (upcoming) note = 'Next unlock: ' + fmtMoney(upcoming.commission_amount) + ' on ' + fmtDate(upcoming.unlock_at) + '.';
+    else if (bal.unlocked >= 1500) note = 'Your unlocked balance has crossed ₹1,500 — you can request a withdrawal.';
+    else note = 'Keep introducing GYMBoat to gym owners you know. Commission is added once a referred gym pays.';
+    $('insightNote').textContent = note;
+  }
+
   /* ---------- boot ---------- */
   if (localStorage.getItem(TOKEN_KEY)) {
     loadDashboard();
   } else {
     $('loadingVeil').style.display = 'none';
+    if (new URLSearchParams(location.search).get('signup')) $('tabSignup').click(); // landing-page CTA opens Sign Up directly
   }
 })();
 </script>
